@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>汽车管理系统</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <style>
+        *{
+            padding:0;
+            margin:0;
+        }
+        .title{
+            width: 100%;
+            height:30px;
+            background: #337ab7;
+        }
+        .title h5{
+            color:#fff;
+            padding-left: 20px;
+            padding-top: 5px;
+        }
+        a{
+            text-decoration: none;
+        }
+        .box{
+            width: 100%;
+            height: 500px;
+            position: relative;
+        }
+        .left{
+            float: left;
+            width:200px;
+            height:500px;
+            border-right: 3px solid #ccc;
+        }
+        .right{
+            position: absolute;
+            top:0;
+            left: 250px;
+            width:600px;
+            height:300px;
+        }
+        #tbody tr th{
+            text-align: center;
+        }
+        .count{
+            width:600px;
+            height:300px;
+            border-top:2px solid #ccc;
+            padding-top: 20px;
+        }
+        .count p input{
+            width:100px;
+        }
+    </style>
+</head>
+<body>
+<div class="title">
+    <h5>汽车租赁管理系统</h5>
+</div>
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+                <li><a href="/index">客人查询 </a></li>
+                <li  class="active"><a href="/zulin">租赁登记</a></li>
+                <li><a href="/guihuan">归还登记</a></li>
+                <li><a href="/tongji">统计分析</a></li>
+                <li><a href="/leibie">类别档案</a></li>
+                <li><a href="/qiche">汽车档案</a></li>
+                <li><a href="/tui" id="tui">退出系统</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="box">
+    <div class="left">
+        <table class="table  table-striped navbar-default">
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+    <div class="right">
+        <table class="table  table-striped navbar-default">
+            <thead>
+            <tr>
+                <td></td>
+                <td>行号</td>
+                <td>汽车名称</td>
+                <td>每日租金</td>
+                <td>可租状态</td>
+            </tr>
+            </thead>
+            <tbody id="zulincar"></tbody>
+        </table>
+        <div class="count">
+            <p>
+                租赁时长: <input type=number class="day" id="day" class="inp" type="text" value="1">天
+                每天租金: <input class="daymoney" id="daymoney" class="inp" type="text">元
+                合计金额: <input id="zong" class="inp" type="text">元
+            </p>
+            <p>
+                客人选择:<select class="peoname"></select>
+                客人支付: <input class="pay" type="text">
+            </p>
+            <p>
+                <button type="button" id="queren">确定租出</button>
+                <button>退出</button>
+            </p>
+        </div>
+    </div>
+
+</div>
+
+
+
+
+<script src="js/jquery-1.12.3.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/PageNav.js"></script>
+<script type="text/javascript" src="js/underscore.js"></script>
+<script>
+    //左侧数据  汽车类别
+    $.get("/zudoadd",function(data){
+        var str="";
+        var data=data.result;
+        for(var i=0;i<data.length;i++){
+             str="<tr><th>"+data[i].name+"</th></tr>";
+            $("#tbody").append(str);
+        }
+    })
+
+    //客人选择
+    $.get("/people",function(data){
+        var strp="";
+        var data=data.result;
+        for(var i=0;i<data.length;i++){
+            strp="<option>"+data[i].name+"</option>";
+            $(".peoname").append(strp);
+        }
+    })
+
+
+    //左侧点击,右侧显示对应汽车
+    $(document).on("click","#tbody tr th",function(){
+        var typename=$(this).html();
+        $.get("/zucar",function(data){
+            $("#zulincar").empty()
+            var str="";
+            var data=data.result;
+                $.each(data, function (i, n) {
+                    if(n.leixing==typename){
+                    str="<tr class='shows '>" +
+                        "<th><input type='radio' class='delbtn show' name='timu' data-sid='\" + data[i].sid + \"'/></th>"+
+                        "<th class='sid'>"+data[i].sid+"</th>" +
+                        "<th class='name'>"+data[i].name+"</th>" +
+                        "<th class='jiage'>"+data[i].jiage+"</th>" +
+                        "<th class='zhuangtai'>"+data[i].zhuangtai+"</th>" +
+                        "</tr>";
+                    $("#zulincar").append(str);
+                }
+            })
+        })
+    })
+
+
+    //计算
+    $("#zulincar").delegate(".shows", "click", function () {
+        var $this = $("input[name=timu]:checked").parents().children();
+        var daymoney= $this.eq(4).html();
+        $('#daymoney').val(daymoney);
+        $('#zong').val(daymoney);
+    })
+    $("input[type=number]").click(function () {
+        var zong=$("#day").val()*$("#daymoney").val();
+        $('#zong').val(zong);
+        if($("input[type=number]").val()<1){
+            $("#day").val("1")
+        }
+    })
+
+    //确认出租
+    $("#queren").click(function () {
+            var This = $("input[name=timu]:checked").parents().children();
+            var sid = $(This).eq(2).html();
+             $(This).eq(5).html("已租出");
+            var zhuangtai = $(This).eq(5).html();
+            console.log(zhuangtai);
+            $.post("/chuzu/" + sid,{
+                zhuangtai: zhuangtai
+            },function(data){
+                if(data.result == 1){
+                    alert("成功");
+                }else{
+                    alert("服务器错误！请联系管理员，怎么联系我也不知道！");
+                }
+            })
+    })
+
+    $("#queren").click(function () {
+        var This = $("input[name=timu]:checked").parents().children();
+        var sid = $(This).eq(2).html();
+        var carname = $(This).eq(3).html();
+        $(This).eq(5).html("已租出");
+        var zhuangtai = $(This).eq(5).html();
+        $.post("/zuadd", {
+            sid: sid,
+            proname:$(".peoname").val(),
+            carname:carname,
+            day:$(".day").val(),
+            daymoney:$(".daymoney").val(),
+            pay:$(".pay").val(),
+            yingpay:$(".inp").val(),
+            zhuangtai: zhuangtai
+        }, function (data) {
+            if (data.result == 1) {
+                alert("提交成功！");
+            } else if (data.result == -1) {
+                alert("提交失败,被占用！");
+            } else if (data.result == -2) {
+                alert("服务器错误！请联系管理员，怎么联系我也不知道！");
+            }
+        })
+    });
+
+
+    //退出系统
+    $("#tui").click(function () {
+        $.get("/tui",function (data) {
+            alert("成功");
+            window.location="/";
+        })
+    })
+
+    // var This = $("input[name=timu]:checked").parents().children();
+    // console.log($(This).eq(5).html())
+    // if($(".zhuangtai").html("已租出")){
+    //     $("#queren").attr({"disabled":"disabled"});
+    // }
+
+
+
+
+
+
+</script>
+
+
+</body>
+</html>

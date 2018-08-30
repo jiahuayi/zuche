@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>汽车管理系统</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <style>
+        *{
+            padding:0;
+            margin:0;
+        }
+        .title{
+            width: 100%;
+            height:30px;
+            background: #337ab7;
+        }
+        .title h5{
+            color:#fff;
+            padding-left: 20px;
+            padding-top: 5px;
+        }
+
+        a{
+            text-decoration: none;
+        }
+        .count p input{
+            width:100px;
+        }
+    </style>
+</head>
+<body>
+<div class="title">
+    <h5>汽车租赁管理系统--归还登记</h5>
+</div>
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+                <li><a href="/index">客人查询 </a></li>
+                <li><a href="/zulin">租赁登记</a></li>
+                <li  class="active"><a href="/guihuan">归还登记</a></li>
+                <li><a href="/tongji">统计分析</a></li>
+                <li><a href="/leibie">类别档案</a></li>
+                <li><a href="/qiche">汽车档案</a></li>
+                <li><a href="/tui" id="tui">退出系统</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<div class="container" style="margin-top: 10px">
+
+    <table class="table  table-striped navbar-default" style="margin-top: 50px">
+        <thead>
+        <tr>
+            <th></th>
+            <th>行号</th>
+            <th>租赁人</th>
+            <th>租赁名称</th>
+            <th>租赁时长</th>
+            <th>每天价格</th>
+            <th>已付押金</th>
+            <th>应付金额</th>
+        </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+    </table>
+    <div id="pagenavbox"></div>
+    <div class="count">
+        <p>
+            已付押金: <input class="payid" type="text">
+            应付金额: <input class="payall" type="text">
+            找零金额: <input class="paysum" type="text">
+        </p>
+        <p>
+            <button class="queding">确定</button>
+        </p>
+    </div>
+</div>
+
+
+
+<script src="js/jquery-1.12.3.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/PageNav.js"></script>
+<script type="text/javascript" src="js/underscore.js"></script>
+
+<script>
+
+    $.get("/guidoadd?page=1", function (data) {
+        new PageNav({
+            boxid: "pagenavbox",
+            page: 1,
+            pageAmount: data.pageAmount,
+            change: function (pagenumber) {
+                gotopage(pagenumber);
+            }
+        });
+        gotopage(1);
+    });
+    function gotopage(pagenumber) {
+        $("#tbody").empty();
+        $.get("/guidoadd?page=" + pagenumber, function (data) {
+            $.each(data.results, function (i, n) {
+                //创建一个tr标签
+                $tr = $("<tr class='shows'></tr>");
+                $("<td><input type='radio' class='delbtn show' name='timu' data-sid='" + n.sid + "'/></td>").appendTo($tr);
+                $("<td></td>").html(n.sid).appendTo($tr);
+                $("<td class='proname'></td>").html(n.proname).appendTo($tr);
+                $("<td class='carname'></td>").html(n.carname).appendTo($tr);
+                $("<td class='day'></td>").html(n.day).appendTo($tr);
+                $("<td class='daymoney'></td>").html(n.daymoney).appendTo($tr);
+                $("<td class='pay'></td>").html(n.pay).appendTo($tr);
+                $("<td class='yingpay'></td>").html(n.yingpay).appendTo($tr);
+                //上树
+                $tr.appendTo($("#tbody"));
+            });
+        });
+    }
+
+    $("#tbody").delegate(".shows", "click", function () {
+        var This = $("input[name=timu]:checked").parents().children();
+        var payid = $(This).eq(7).html();
+        var payall = $(This).eq(8).html();
+        $(".payid").val(payid)
+        $(".payall").val(payall)
+        paysum=$(".payid").val()-$(".payall").val();
+        $(".paysum").val(paysum)
+    })
+
+    //确认
+    $(".queding").click(function () {
+        var This = $("input[name=timu]:checked").parents().children();
+        var sid = This.eq(2).html();
+        var carname = This.eq(4).html();
+        var proname = This.eq(3).html();
+        var payall = This.eq(8).html();
+        var zhuangtai = "未租出";
+        $.post("/guihuan/" + sid,{
+            zhuangtai: zhuangtai
+        },function(data){
+            if(data.result == 1){
+                alert("成功");
+            }else{
+                alert("服务器错误！请联系管理员，怎么联系我也不知道！");
+            }
+        })
+
+        $.post("/guiadd", {
+            sid: sid,
+            carname:carname,
+            proname:proname,
+            payall: payall,
+            paysum:paysum,
+            riqi:payall,
+            caozuoyuan:proname
+        }, function (data) {
+            if (data.result == 1) {
+                alert("提交成功！");
+            } else if (data.result == -1) {
+                alert("提交失败,被占用！");
+            } else if (data.result == -2) {
+                alert("服务器错误！请联系管理员，怎么联系我也不知道！");
+            }
+        })
+
+        $.ajax({
+            url: "/gui/" + sid,
+            type: "delete",
+            success: function (data) {
+                if (data.result == 1) {
+                    alert("删除成功");
+                    This.parents("tr").remove();
+                    window.location.href = '/guihuan'
+                } else {
+                    alert("服务器错误！");
+                }
+            }
+        });
+
+    })
+
+    $("#tui").click(function () {
+        $.get("/tui",function (data) {
+            alert("成功");
+            window.location="/";
+        })
+    })
+</script>
+
+</body>
+</html>
